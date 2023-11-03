@@ -69,26 +69,27 @@ class GUI:
         self.attack = 10
         self.defense = 12
         self.reputation = 0
+        self.loot_tables = {}
+        self.opened_chests = {
+        }
         self.temp = Temp()
         
         self.temp.data["id"] = self.player_id
         self.last_input = ""
         
-        self.Run()
+        self.__Run()
 
     
-    def Run(self):
+    def __Run(self):
         pygame.mouse.set_visible(False)
-        chest1 = Chest(27)
-        chest1.Generate()
         slotText = ""
+        chest_image = pygame.image.load("./data/images/chest.png").convert()
         slotFont = pygame.font.Font(None, 16)
         slotColour = (75, 0, 130)
         filepath = "./structures/house"
         structure = LoadFile(filepath + "/structure.map")
-        cont = LoadJSONFile(filepath + "/cont.json")
+        cont = LoadJSONFile(filepath + "/cont.json") # Not Used at the Moment
         Player = Character(self.screen, (255, 0, 0))
-        chest = chest1.GetTable()
         default_chest_x = self.screen.get_width() / 3.5
         default_chest_y = self.screen.get_height() / 2
         size = 27
@@ -128,13 +129,13 @@ class GUI:
                             self.InInv = False
                             self.InMain = True
                     
-                    elif event.key == pygame.K_l:
-                        if self.InMain and not self.InChest:
-                            self.InChest = True
-                            self.InMain = False
-                        elif not self.InMain and self.InChest:
-                            self.InChest = False
-                            self.InMain = True
+                    # elif event.key == pygame.K_l:
+                    #     if self.InMain and not self.InChest:
+                    #         self.InChest = True
+                    #         self.InMain = False
+                    #     elif not self.InMain and self.InChest:
+                    #         self.InChest = False
+                    #         self.InMain = True
             
             if self.InInv:
                 ...
@@ -194,6 +195,8 @@ class GUI:
                             pygame.draw.rect(self.screen, (132, 65, 16), (pos_x, pos_y, 32, 32))
                         elif block == "#": # Wall
                             pygame.draw.rect(self.screen, (74, 74, 74), (pos_x, pos_y, 32, 32))
+                        elif block == "C": # Chest
+                            self.screen.blit(chest_image, block_rect)
                         else:
                             pygame.draw.rect(self.screen, (174, 106, 57), (pos_x, pos_y, 32, 32))
                 
@@ -230,6 +233,19 @@ class GUI:
         with open("./temp/{0}-{1}.json".format(self.session_id, self.player_id), "w") as file:
             json.dump(self.temp.data, file, indent=4)
 
+class Events:
+    def __init__(self, map_data: list):
+        self.map_data = map_data
+    
+    def Interact(self, x: int, y: int):
+        pos_x = 0
+        pos_y = 0
+        
+        for line in self.map_data:
+            pos_x += 32
+            if not block == "":
+                block_rect = pygame.Rect(pos_x, pos_y, 32, 32)
+                
 
 class Temp:
     #? Store Temporary Data
@@ -251,12 +267,25 @@ class Temp:
 
 class Inventory:
     ''' Grabs the inventory from Temp.data '''
+    def __GetItems(Type: str):
+        with open("./local/local.json") as file:
+            FileData = json.load(file)
+        
+        if Type == "Items":
+            return FileData["Items"]
+        elif Type == "Enchantments":
+            return FileData["Enchantments"]
+        elif Type == "Equipment":
+            return FileData["Equipment"]
+        else:
+            return { "error": "This branch does not exist" }
+    
     def GrabItem(Temp: object, itemName: str, itemID: str):
         Inventory = Temp.data["Inventory"]
         
         for Slot in Inventory:
             if Slot["name"] == itemName and Slot["id"] == itemID:
-                return  Slot
+                return Slot
     
     
     def SetItem(Temp: object, itemData: dict):
@@ -315,7 +344,7 @@ class Chest:
         newTable = []
         
         for x in range(0, self.size):
-            regSlot = self.GenSlot()
+            regSlot = self.__GenSlot()
             newSlot = {
                 "ID": x,
                 "Slot": regSlot
@@ -324,7 +353,7 @@ class Chest:
         
         self.table = newTable
     
-    def GenSlot(self):
+    def __GenSlot(self):
         if random.randint(1, 10) >= 7:
             choice = random.choice(self.LocalEquipment + self.LocalItems)
             slot = { "Slot": choice }
